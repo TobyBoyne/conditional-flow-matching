@@ -1,5 +1,6 @@
 import math
 
+from scipy.stats import gaussian_kde
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -87,8 +88,12 @@ def plot_trajectories_1d(traj, prior: torch.distributions.Normal=None, posterior
         h = torch.linspace(h_low, h_high, 100)
         prior_dist = prior.log_prob(h).exp()
         post_dist = posterior.log_prob(h).exp()
-        plt.plot(-prior_dist, h)
-        plt.plot(1+post_dist, h)
+        plt.plot(-prior_dist, h, label="Prior distribution")
+        plt.plot(1+post_dist, h, label="Posterior target distribution")
+
+        # approximate pdf
+        kde = gaussian_kde(traj[-1, :n, 0])
+        plt.plot(1 + kde.pdf(h), h, label="Posterior sampled distribution")
 
     plt.legend()
     plt.xticks([])
