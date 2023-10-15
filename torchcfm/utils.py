@@ -66,6 +66,35 @@ def plot_trajectories(traj):
     plt.show()
 
 
+def plot_trajectories_1d(traj, prior: torch.distributions.Normal=None, posterior:torch.distributions.Normal=None):
+    """Plot the 1D trajectories of some selected samples."""
+    n = min(2000, traj.shape[1])
+    t = np.linspace(0, 1, traj.shape[0])
+    T = np.tile(t, (n, 1)).T
+    plt.figure(figsize=(6, 6))
+    # plot start, end and trajectory
+    plt.scatter(T[0, :], traj[0, :n, 0], s=10, alpha=0.5, c="black", 
+                label="Prior sample z(S)")
+    plt.plot(T, traj[:, :n, 0], alpha=0.1, c="olive",
+             label = "_Flow")
+    plt.scatter(T[-1, :], traj[-1, :n, 0], s=4, alpha=0.5, c="blue",
+                label = "z(0)")
+
+    # plot distributions
+    if prior is not None and posterior is not None:
+        h_low = np.min(traj[(0, -1), :n, 0])
+        h_high = np.max(traj[(0, -1), :n, 0])
+        h = torch.linspace(h_low, h_high, 100)
+        prior_dist = prior.log_prob(h).exp()
+        post_dist = posterior.log_prob(h).exp()
+        plt.plot(-prior_dist, h)
+        plt.plot(1+post_dist, h)
+
+    plt.legend()
+    plt.xticks([])
+    plt.yticks([])
+    plt.show()
+
 class SDE(torch.nn.Module):
     noise_type = "diagonal"
     sde_type = "ito"
