@@ -9,6 +9,18 @@ from torchdyn.datasets import generate_moons
 
 # Implement some helper functions
 
+def get_conjugate_gaussians(
+        prior_mu=0.0,
+        prior_sigma=1.0,
+        ll_mu=0.0,
+        ll_sigma=1.0,
+):
+    prior = torch.distributions.Normal(loc=prior_mu, scale=prior_sigma)
+    mu = (prior_mu * prior_sigma ** -2) + (ll_mu * ll_sigma ** -2)
+    mu /= (prior_sigma ** -2 + ll_sigma ** -2)
+    var = (prior_sigma **2 * ll_sigma ** 2) / (prior_sigma **2 + ll_sigma ** 2)
+    posterior = torch.distributions.Normal(loc=mu, scale=np.sqrt(var))
+    return prior, posterior
 
 def eight_normal_sample(n, dim, scale=1, var=1):
     m = torch.distributions.multivariate_normal.MultivariateNormal(
@@ -104,8 +116,8 @@ def plot_trajectories_1d(
         ax.plot(1 + kde.pdf(h), h, label="Posterior sampled distribution")
 
     ax.legend()
-    # ax.set_xticks([])
-    ax.set_yticks([])
+    ax.set_xticks([])
+    # ax.set_yticks([])
     return fig
 
 class SDE(torch.nn.Module):
