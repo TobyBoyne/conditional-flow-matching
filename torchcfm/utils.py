@@ -95,27 +95,27 @@ def plot_trajectories_1d(
         fig, ax = plt.subplots(figsize=(6, 6))
     # plot start, end and trajectory
     ax.scatter(T[0, :], traj[0, :n, 0], s=10, alpha=0.5, c="black", 
-                label="Prior sample z(S)")
+                label="Prior sample z(S)", marker="x")
     ax.plot(T[:, n_flows], traj[:, :n_flows, 0], alpha=0.1, c="olive",
              label = "_Flow")
     ax.scatter(T[-1, :], traj[-1, :n, 0], s=4, alpha=0.5, c="blue",
-                label = "z(0)")
+                label = "Posterior sample z(0)", marker="x")
 
     # plot distributions
     if prior is not None and posterior is not None:
         h_low = np.min(traj[(0, -1), :n, 0])
         h_high = np.max(traj[(0, -1), :n, 0])
-        h = torch.linspace(h_low, h_high, 100)
+        h = torch.linspace(-3, 10, 100)
         prior_dist = prior.log_prob(h).exp()
         post_dist = posterior.log_prob(h).exp()
-        ax.plot(-prior_dist, h, label="Prior distribution")
-        ax.plot(1+post_dist, h, label="Posterior target distribution")
+        d = 0.0
+        ax.plot(-prior_dist-d, h, label="Prior distribution", c="black")
+        ax.plot(1+post_dist+d, h, label="Posterior target distribution", c="blue")
 
         # approximate pdf
         kde = gaussian_kde(traj[-1, :n, 0])
-        ax.plot(1 + kde.pdf(h), h, label="Posterior sampled distribution")
+        ax.plot(1 + kde.pdf(h), h, label="Posterior estimated distribution", c="lightblue")
 
-    ax.legend()
     ax.set_xticks([])
     # ax.set_yticks([])
     return fig
