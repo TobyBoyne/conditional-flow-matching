@@ -9,6 +9,18 @@ from torchdyn.datasets import generate_moons
 
 # Implement some helper functions
 
+def get_conjugate_gaussians(
+        prior_mu=0.0,
+        prior_sigma=1.0,
+        ll_mu=0.0,
+        ll_sigma=1.0,
+):
+    prior = torch.distributions.Normal(loc=prior_mu, scale=prior_sigma)
+    mu = (prior_mu * prior_sigma ** -2) + (ll_mu * ll_sigma ** -2)
+    mu /= (prior_sigma ** -2 + ll_sigma ** -2)
+    var = (prior_sigma **2 * ll_sigma ** 2) / (prior_sigma **2 + ll_sigma ** 2)
+    posterior = torch.distributions.Normal(loc=mu, scale=np.sqrt(var))
+    return prior, posterior
 
 def eight_normal_sample(n, dim, scale=1, var=1):
     m = torch.distributions.multivariate_normal.MultivariateNormal(
@@ -67,18 +79,26 @@ def plot_trajectories(traj):
     plt.show()
 
 
-def plot_trajectories_1d(traj, prior: torch.distributions.Normal=None, posterior:torch.distributions.Normal=None):
+def plot_trajectories_1d(
+        traj, 
+        prior: torch.distributions.Normal=None, 
+        posterior:torch.distributions.Normal=None,
+        fig=None,
+        ax=None
+    ):
     """Plot the 1D trajectories of some selected samples."""
     n = min(2000, traj.shape[1])
+    n_flows = min(100, n)
     t = np.linspace(0, 1, traj.shape[0])
     T = np.tile(t, (n, 1)).T
-    plt.figure(figsize=(6, 6))
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 6))
     # plot start, end and trajectory
-    plt.scatter(T[0, :], traj[0, :n, 0], s=10, alpha=0.5, c="black", 
+    ax.scatter(T[0, :], traj[0, :n, 0], s=10, alpha=0.5, c="black", 
                 label="Prior sample z(S)")
-    plt.plot(T, traj[:, :n, 0], alpha=0.1, c="olive",
+    ax.plot(T[:, n_flows], traj[:, :n_flows, 0], alpha=0.1, c="olive",
              label = "_Flow")
-    plt.scatter(T[-1, :], traj[-1, :n, 0], s=4, alpha=0.5, c="blue",
+    ax.scatter(T[-1, :], traj[-1, :n, 0], s=4, alpha=0.5, c="blue",
                 label = "z(0)")
 
     # plot distributions
@@ -88,17 +108,17 @@ def plot_trajectories_1d(traj, prior: torch.distributions.Normal=None, posterior
         h = torch.linspace(h_low, h_high, 100)
         prior_dist = prior.log_prob(h).exp()
         post_dist = posterior.log_prob(h).exp()
-        plt.plot(-prior_dist, h, label="Prior distribution")
-        plt.plot(1+post_dist, h, label="Posterior target distribution")
+        ax.plot(-prior_dist, h, label="Prior distribution")
+        ax.plot(1+post_dist, h, label="Posterior target distribution")
 
         # approximate pdf
         kde = gaussian_kde(traj[-1, :n, 0])
-        plt.plot(1 + kde.pdf(h), h, label="Posterior sampled distribution")
+        ax.plot(1 + kde.pdf(h), h, label="Posterior sampled distribution")
 
-    plt.legend()
-    plt.xticks([])
-    plt.yticks([])
-    plt.show()
+    ax.legend()
+    ax.set_xticks([])
+    # ax.set_yticks([])
+    return fig
 
 def plot_trajectories_1d_multi(traj, prior: torch.distributions.Normal=None, posterior:torch.distributions.Normal=None):
 
