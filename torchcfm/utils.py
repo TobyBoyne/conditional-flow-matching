@@ -120,6 +120,53 @@ def plot_trajectories_1d(
     # ax.set_yticks([])
     return fig
 
+def plot_trajectories_1d_multi(traj, prior: torch.distributions.Normal=None, posterior:torch.distributions.Normal=None):
+
+    def h_bound(h, dist):
+        if (type(dist).__name__ == 'Uniform')|(type(dist).__name__ == 'Beta'):
+            return torch.cat([torch.Tensor([dist.support.lower_bound]), h[(h>dist.support.lower_bound)&(h<dist.support.upper_bound)], 
+                              torch.Tensor([dist.support.upper_bound])])
+        elif type(dist).__name__ == 'Gamma':
+            return h[(h>0.0)]
+        else:
+            return h
+        
+    """Plot the 1D trajectories of some selected samples."""
+    n = min(2000, traj.shape[1])
+    t = np.linspace(0, 1, traj.shape[0])
+    T = np.tile(t, (n, 1)).T
+    plt.figure(figsize=(6, 6))
+    # plot start, end and trajectory
+    plt.scatter(T[0, :], traj[0, :n, 0], s=10, alpha=0.5, c="black", 
+                label="Prior sample z(S)")
+    plt.plot(T, traj[:, :n, 0], alpha=0.1, c="olive",
+             label = "_Flow")
+    plt.scatter(T[-1, :], traj[-1, :n, 0], s=4, alpha=0.5, c="blue",
+                label = "z(0)")
+
+    # plot distributions
+    if prior is not None and posterior is not None:
+        h_low = np.min(traj[(0, -1), :n, 0])
+        h_high = np.max(traj[(0, -1), :n, 0])
+        h = torch.linspace(h_low, h_high, 100)
+
+        h_prior = h_bound(h, prior)
+        h_posterior = h_bound(h, posterior)
+            
+        prior_dist = prior.log_prob(h_prior).exp()
+        post_dist = posterior.log_prob(h_posterior).exp()
+        plt.plot(-prior_dist, h_prior, label="Prior distribution")
+        plt.plot(1+post_dist, h_posterior, label="Posterior target distribution")
+
+        # approximate pdf
+        kde = gaussian_kde(traj[-1, :n, 0])
+        plt.plot(1 + kde.pdf(h), h, label="Posterior sampled distribution")
+
+    plt.legend()
+    plt.xticks([])
+    plt.yticks([])
+    plt.show()
+
 class SDE(torch.nn.Module):
     noise_type = "diagonal"
     sde_type = "ito"
